@@ -1,0 +1,645 @@
+@import "tailwindcss";
+
+/* Tailwind v4, CSS-first: tokens, utilities and keyframes are defined HERE.
+   A tailwind.config.* is never executed, and @config, @plugin and CSS @import of an npm
+   package all fail — the import above is the only package import that resolves.
+   A --font-* token names a font, it does not load one: add an @font-face or a stylesheet
+   link in index.html, or the stack silently falls through to the next family. */
+
+/* Bind the dark: variant to the .dark class that ThemeProvider puts on <html>. Without this,
+   Tailwind v4 defaults dark: to prefers-color-scheme, which would drift from the palette below
+   and from chart.tsx's .dark selector. Palette and utilities must switch on the same signal. */
+@custom-variant dark (&:is(.dark *));
+
+/* Every token here maps to a raw variable rather than a literal colour. `inline` substitutes the
+   MAPPING (var(--background)) into each utility, so .bg-background emits var(--background) and
+   re-resolves whenever :root/.dark changes it. Putting literals here instead bakes the light value
+   into the utility and makes dark mode impossible — utilities stop referencing the variable at all. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* The ground a photograph sits on, and the fill behind one that is missing. Warmer than the
+     neutral ramp on purpose: a photo well tinted the same gray as the page reads as a hole in
+     the layout rather than as the place a picture belongs. */
+  --color-paper: var(--paper);
+
+  /* Semantic, not thematic: paid, active, delivered. Change the accent freely and leave these
+     alone, the same way destructive is left alone — recoloring them would misreport state. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+
+  /* "Inter" was listed here for a year while nothing ever loaded it, so every app silently
+     rendered the next family in the stack. Name a font here only once it is actually loaded. */
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+}
+
+@property --tw-enter-opacity {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-enter-scale {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-enter-rotate {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-enter-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-enter-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-opacity {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-exit-scale {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-exit-rotate {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-translate-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --tw-exit-translate-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes caret-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  50% {
+    opacity: 0;
+  }
+}
+
+/* These animate the INDIVIDUAL translate/scale/rotate properties, never the `transform`
+   shorthand. Tailwind v4 compiles `translate-x-[-50%]` to `translate: -50% -50%` (an
+   independent property), not to `transform`. A keyframe writing `transform` would therefore
+   COMPOSE with that centering rather than override it: a dialog centered at -50%/-50% and
+   entering from `slide-in-from-top-[48%]` would start at -98% vertically and fly in from
+   most of a screen away. Animating `translate` directly overrides the static value for the
+   duration, which is what the v3 plugin achieved via `transform` and what the 48%/50%
+   pairing in dialog.tsx assumes — a 2% slide.
+   If you reintroduce `transform` here, dialogs, alert-dialogs, sheets and popovers all break. */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    translate: var(--tw-enter-translate-x, 0) var(--tw-enter-translate-y, 0);
+    scale: var(--tw-enter-scale, 1);
+    rotate: var(--tw-enter-rotate, 0);
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    translate: var(--tw-exit-translate-x, 0) var(--tw-exit-translate-y, 0);
+    scale: var(--tw-exit-scale, 1);
+    rotate: var(--tw-exit-rotate, 0);
+  }
+}
+
+@utility animate-in {
+  animation-name: enter;
+  animation-duration: var(--tw-duration, 150ms);
+  animation-timing-function: var(--tw-ease, ease);
+}
+
+@utility animate-out {
+  animation-name: exit;
+  animation-duration: var(--tw-duration, 150ms);
+  animation-timing-function: var(--tw-ease, ease);
+  animation-fill-mode: forwards;
+}
+
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
+
+@utility fade-in-* {
+  --tw-enter-opacity: calc(--value(number) / 100);
+}
+
+@utility fade-out {
+  --tw-exit-opacity: 0;
+}
+
+@utility fade-out-* {
+  --tw-exit-opacity: calc(--value(number) / 100);
+}
+
+@utility zoom-in-* {
+  --tw-enter-scale: calc(--value(number) / 100);
+}
+
+@utility zoom-out-* {
+  --tw-exit-scale: calc(--value(number) / 100);
+}
+
+@utility slide-in-from-top {
+  --tw-enter-translate-y: -100%;
+}
+
+@utility slide-in-from-top-* {
+  --tw-enter-translate-y: calc(-1 * --spacing(--value(number)));
+  --tw-enter-translate-y: calc(-100% * --value(ratio));
+  --tw-enter-translate-y: calc(-1 * --value([percentage]));
+}
+
+@utility slide-in-from-bottom {
+  --tw-enter-translate-y: 100%;
+}
+
+@utility slide-in-from-bottom-* {
+  --tw-enter-translate-y: --spacing(--value(number));
+  --tw-enter-translate-y: calc(100% * --value(ratio));
+  --tw-enter-translate-y: --value([percentage]);
+}
+
+@utility slide-in-from-left {
+  --tw-enter-translate-x: -100%;
+}
+
+@utility slide-in-from-left-* {
+  --tw-enter-translate-x: calc(-1 * --spacing(--value(number)));
+  --tw-enter-translate-x: calc(-100% * --value(ratio));
+  --tw-enter-translate-x: calc(-1 * --value([percentage]));
+}
+
+@utility slide-in-from-right {
+  --tw-enter-translate-x: 100%;
+}
+
+@utility slide-in-from-right-* {
+  --tw-enter-translate-x: --spacing(--value(number));
+  --tw-enter-translate-x: calc(100% * --value(ratio));
+  --tw-enter-translate-x: --value([percentage]);
+}
+
+@utility slide-out-to-top {
+  --tw-exit-translate-y: -100%;
+}
+
+@utility slide-out-to-top-* {
+  --tw-exit-translate-y: calc(-1 * --spacing(--value(number)));
+  --tw-exit-translate-y: calc(-100% * --value(ratio));
+  --tw-exit-translate-y: calc(-1 * --value([percentage]));
+}
+
+@utility slide-out-to-bottom {
+  --tw-exit-translate-y: 100%;
+}
+
+@utility slide-out-to-bottom-* {
+  --tw-exit-translate-y: --spacing(--value(number));
+  --tw-exit-translate-y: calc(100% * --value(ratio));
+  --tw-exit-translate-y: --value([percentage]);
+}
+
+@utility slide-out-to-left {
+  --tw-exit-translate-x: -100%;
+}
+
+@utility slide-out-to-left-* {
+  --tw-exit-translate-x: calc(-1 * --spacing(--value(number)));
+  --tw-exit-translate-x: calc(-100% * --value(ratio));
+  --tw-exit-translate-x: calc(-1 * --value([percentage]));
+}
+
+@utility slide-out-to-right {
+  --tw-exit-translate-x: 100%;
+}
+
+@utility slide-out-to-right-* {
+  --tw-exit-translate-x: --spacing(--value(number));
+  --tw-exit-translate-x: calc(100% * --value(ratio));
+  --tw-exit-translate-x: --value([percentage]);
+}
+
+/* The palette. This block is the "make it ours" edit — change the accent, the canvas and the
+   surface here and the whole app follows, because every component reads these variables rather
+   than a color of its own.
+
+   FIRST, CHECK FOR `src/lib/theme.ts`. If that file exists, it is the palette and this block is
+   not: the commerce foundation writes its colours onto the document at mount, after this
+   stylesheet, so a value here is overridden whatever it says. Editing only this block then
+   changes nothing on screen — which cost a production session a stretch of a build, hunting a
+   defect that was only this rule. With `theme.ts` present, edit it, and keep the two in agreement
+   if you touch this at all. Without it, this block is the palette.
+
+   Three properties of it are deliberate, and each is something a visitor can see. The grays are
+   neutral rather than slate, because photography is the only color most pages should be arguing
+   for and a blue cast fights it. The canvas is one step off white while cards stay white, so a
+   card reads as a surface instead of as a hairline drawn on the page. And primary is an actual
+   color rather than near-black, so exactly one thing on a screen can be the action worth taking.
+
+   Success and destructive are not yours to restyle: they mean paid and failed, and recoloring
+   them would misreport state.
+
+   These values are consumed directly by the utilities, so each must be a COMPLETE colour —
+   hsl(...), oklch(...) or #hex. Bare HSL channels (`0 0% 100%`) are the shadcn v3 shape and
+   produce invalid values here, because nothing wraps them in hsl(). A new semantic token needs
+   three things: the raw value here, a --color-* mapping above, and a .dark value. */
+:root {
+  --radius: 0.5rem;
+
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(0 0% 12%);
+
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 12%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 12%);
+
+  --paper: hsl(40 10% 95%);
+
+  --primary: hsl(217 55% 42%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  --secondary: hsl(0 0% 94%);
+  --secondary-foreground: hsl(0 0% 12%);
+
+  --muted: hsl(0 0% 94%);
+  --muted-foreground: hsl(0 0% 42%);
+
+  --accent: hsl(0 0% 94%);
+  --accent-foreground: hsl(0 0% 12%);
+
+  --success: hsl(152 45% 32%);
+  --success-foreground: hsl(0 0% 100%);
+
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --border: hsl(0 0% 89%);
+  /* A notch darker than a hairline. A form control has to be findable against the canvas before
+     it is pretty, which means roughly 3:1 against the page rather than the 1.2:1 a card edge
+     gets away with. */
+  --input: hsl(0 0% 80%);
+  --ring: hsl(217 55% 42%);
+
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(0 0% 12%);
+  --sidebar-primary: hsl(217 55% 42%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(0 0% 94%);
+  --sidebar-accent-foreground: hsl(0 0% 12%);
+  --sidebar-border: hsl(0 0% 89%);
+  --sidebar-ring: hsl(217 55% 42%);
+}
+
+/* The accent gets LIGHTER here and its text goes dark. Keeping white text and darkening the blue
+   is the reflex, and it produces a button that disappears into the page. The canvas/surface step
+   survives the flip — 7% page, 10% card — so a card still reads as a surface without a shadow,
+   which is correct: a shadow on a dark ground shows nothing, and compensating with a brighter
+   border is how dark mode starts looking like a wireframe. */
+.dark {
+  --background: hsl(0 0% 7%);
+  --foreground: hsl(0 0% 93%);
+
+  --card: hsl(0 0% 10%);
+  --card-foreground: hsl(0 0% 93%);
+
+  --popover: hsl(0 0% 10%);
+  --popover-foreground: hsl(0 0% 93%);
+
+  --paper: hsl(0 0% 15%);
+
+  --primary: hsl(217 70% 64%);
+  --primary-foreground: hsl(220 30% 10%);
+
+  --secondary: hsl(0 0% 16%);
+  --secondary-foreground: hsl(0 0% 93%);
+
+  --muted: hsl(0 0% 16%);
+  --muted-foreground: hsl(0 0% 62%);
+
+  --accent: hsl(0 0% 16%);
+  --accent-foreground: hsl(0 0% 93%);
+
+  --success: hsl(152 45% 60%);
+  --success-foreground: hsl(0 0% 10%);
+
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --border: hsl(0 0% 17%);
+  --input: hsl(0 0% 24%);
+  --ring: hsl(217 70% 64%);
+
+  --sidebar: hsl(0 0% 10%);
+  --sidebar-foreground: hsl(0 0% 93%);
+  --sidebar-primary: hsl(217 70% 64%);
+  --sidebar-primary-foreground: hsl(220 30% 10%);
+  --sidebar-accent: hsl(0 0% 16%);
+  --sidebar-accent-foreground: hsl(0 0% 93%);
+  --sidebar-border: hsl(0 0% 17%);
+  --sidebar-ring: hsl(217 70% 64%);
+}
+
+/* Written out rather than `@apply border-border` / `@apply bg-background text-foreground`.
+   `@apply` resolves through the `@theme inline` map above, and a name it cannot resolve is a hard
+   compile error that takes the whole stylesheet down — and with it the browser Tailwind compiler,
+   which then stops generating every utility in the app until the page is reloaded. The palette
+   block above is the one an app is meant to edit, so wiring it to a fatal failure a hundred lines
+   away is the wrong trade. These emit exactly what those utilities emit, and a token deleted by
+   mistake now degrades to an unset colour instead of an unstyled app. */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Tailwind's preflight leaves interactive controls on the UA default cursor, so a
+     button gives no hover affordance and reads as dead. Anchors already get pointer
+     from the UA and are left alone; cursor-* utilities still override, being a later layer. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled):not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input:not(:disabled):is([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="reset"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  [role="button"][aria-disabled="true"],
+  input:disabled:is([type="checkbox"], [type="radio"], [type="submit"], [type="button"], [type="reset"]) {
+    cursor: not-allowed;
+  }
+}
+
+/* ================= AcceleDuck OS layer ================= */
+:root {
+  --os-accent: #de5833;
+  --os-accent-soft: rgba(222, 88, 51, 0.16);
+}
+
+.os-root {
+  font-family: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
+  color: #edf1fb;
+  -webkit-font-smoothing: antialiased;
+}
+.os-root input,
+.os-root textarea {
+  user-select: text;
+}
+.os-mono {
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* Wallpapers */
+.wall-bloom {
+  background-color: #0a0f1e;
+  background-image:
+    radial-gradient(1100px 700px at 15% 10%, rgba(245, 197, 24, 0.16), transparent 62%),
+    radial-gradient(900px 650px at 85% 80%, rgba(76, 194, 255, 0.14), transparent 62%),
+    radial-gradient(700px 520px at 72% 16%, rgba(177, 138, 255, 0.1), transparent 60%),
+    linear-gradient(158deg, #0c1327 0%, #0a0f1e 48%, #0c0e1a 100%);
+}
+.wall-midnight {
+  background-color: #050c16;
+  background-image:
+    radial-gradient(900px 620px at 20% 85%, rgba(61, 220, 151, 0.12), transparent 60%),
+    radial-gradient(1000px 700px at 80% 15%, rgba(76, 140, 255, 0.16), transparent 62%),
+    linear-gradient(180deg, #071022 0%, #050c16 100%);
+}
+.wall-dusk {
+  background-color: #140f22;
+  background-image:
+    radial-gradient(1000px 640px at 78% 78%, rgba(255, 126, 182, 0.16), transparent 60%),
+    radial-gradient(820px 560px at 18% 18%, rgba(255, 138, 76, 0.12), transparent 60%),
+    linear-gradient(160deg, #1a1030 0%, #140f22 55%, #0d0a18 100%);
+}
+.wall-tide {
+  background-color: #04121a;
+  background-image:
+    radial-gradient(1100px 700px at 50% 110%, rgba(61, 220, 151, 0.14), transparent 60%),
+    radial-gradient(700px 500px at 12% 10%, rgba(76, 194, 255, 0.12), transparent 60%),
+    linear-gradient(170deg, #06283a 0%, #04121a 60%, #030d14 100%);
+}
+
+/* Acrylic surfaces */
+.os-glass {
+  background: rgba(20, 24, 38, 0.62);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.os-glass-strong {
+  background: rgba(15, 19, 32, 0.88);
+  backdrop-filter: blur(30px) saturate(1.4);
+  -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Windows */
+.win-anim {
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s;
+}
+.win-hidden {
+  opacity: 0;
+  transform: scale(0.92) translateY(48px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0.18s;
+}
+.win-open-anim {
+  animation: win-open 0.22s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+@keyframes win-open {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Start menu */
+.menu-pop {
+  animation: menu-up 0.2s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+@keyframes menu-up {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Boot spinner */
+.boot-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, transparent 0 68%, var(--os-accent) 96%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  animation: boot-rotate 0.9s linear infinite;
+}
+@keyframes boot-rotate {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes boot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.boot-pulse {
+  animation: boot-pulse 2s ease-in-out infinite;
+}
+
+/* Progress fill */
+.os-progress-fill {
+  background-color: var(--os-accent);
+  background-image: linear-gradient(90deg, var(--os-accent), color-mix(in srgb, var(--os-accent) 45%, white));
+}
+
+/* Scrollbars */
+.os-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+.os-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.os-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+}
+.os-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Misc */
+.os-root ::selection {
+  background: var(--os-accent);
+  color: #14131a;
+}
+.os-hover {
+  transition: background-color 0.12s ease;
+}
+
+/* Ducky AI typing dots */
+.duck-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--os-accent);
+  display: inline-block;
+  margin-right: 2px;
+  animation: duck-bounce 1s infinite ease-in-out;
+}
+.duck-dot:nth-child(2) { animation-delay: 0.15s; }
+.duck-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes duck-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
