@@ -186,9 +186,20 @@ export function Desktop({ onLock, onSignOut }: { onLock: () => void; onSignOut: 
       className={`os-root ${customStyle ? '' : `wall-${settings.wallpaper}`} relative h-[100dvh] w-screen overflow-hidden`}
       style={customStyle ?? undefined}
     >
-      {/* watermark duck */}
+      {/* watermark duck + copyright */}
       <div className="pointer-events-none absolute -bottom-16 -right-10 select-none opacity-[0.05]">
         <DuckLogo size={430} />
+      </div>
+      <div className="pointer-events-none absolute inset-0 select-none overflow-hidden">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-[18deg] whitespace-nowrap text-[42px] font-black uppercase tracking-[0.35em] text-white/[0.03]">
+          © Ducky Labs · AcceleDuck OS
+        </div>
+      </div>
+      <div
+        className="pointer-events-none absolute left-3 z-0 select-none text-[10px] tracking-wide text-white/25"
+        style={{ bottom: TASKBAR_H + 8 }}
+      >
+        © 2026 Ducky Labs · AcceleDuck OS — all rights reserved
       </div>
 
       {/* desktop icons — movable, plus custom proxy shortcuts */}

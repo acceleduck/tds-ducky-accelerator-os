@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import db from '@/lib/shared/kliv-database.js';
 import { toast } from 'sonner';
-import { Coins, Trophy } from 'lucide-react';
+import { Coins, Maximize2, Minimize2, Trophy } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDuckcoins } from '@/hooks/useDuckcoins';
 import { displayName } from '@/lib/os/chat';
@@ -37,9 +37,9 @@ interface ScoreRow {
 }
 
 const GAMES: GameDef[] = [
-  { id: 'duck-war-3', name: 'Duck War 3', emoji: '🪖', blurb: 'WW2 ticket war — flags, squads, grenades', tag: 'NEW', Component: DuckWar3 },
-  { id: 'plinko', name: 'Plinko Pond', emoji: '🎰', blurb: 'Bet real DuckCoins, chase the ×2.5', tag: '💰 BETS', Component: PlinkoPond },
-  { id: 'duck-drift', name: 'Duck Drift', emoji: '🏎️', blurb: 'Slide the lot, stack drift combos', tag: 'NEW', Component: DuckDrift },
+  { id: 'duck-war-3', name: 'Duck War 3', emoji: '🪖', blurb: 'Maze arena warfare — CTF, deathmatch, Koth, Domination, 1–2 players', tag: '2P', Component: DuckWar3 },
+  { id: 'plinko', name: 'Plinko Pond', emoji: '🎰', blurb: 'Bet DuckCoins — spam drops, auto-bet, chase the ×2.5', tag: '💰 BETS', Component: PlinkoPond },
+  { id: 'duck-drift', name: 'Duck Drift 3D', emoji: '🏎️', blurb: 'Blocky 3D racer — freeride, space-drift, races & 2P', tag: '2P', Component: DuckDrift },
   { id: 'duck-hole', name: 'Duck Hole', emoji: '🕳️', blurb: 'Swallow the whole map', tag: 'NEW', Component: DuckHole },
   { id: 'duck-merge', name: 'Duck Merge', emoji: '🧬', blurb: 'Merge ducks into DUCK PRIME', tag: 'NEW', Component: DuckMerge },
   { id: 'duck-blocks', name: 'Duck Blocks', emoji: '🧱', blurb: 'Falling-block puzzle', tag: 'NEW', Component: DuckBlocks },
@@ -60,6 +60,49 @@ export default function DuckcadeApp() {
   const [game, setGame] = useState(GAMES[0].id);
   const [board, setBoard] = useState<ScoreRow[]>([]);
   const [lastScore, setLastScore] = useState<number | null>(null);
+
+  // --- fullscreen for the game stage ---
+  const stageRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const natRef = useRef<{ w: number; h: number } | null>(null);
+  const [fs, setFs] = useState(false);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const fit = () => {
+      const nat = natRef.current;
+      if (document.fullscreenElement && nat) {
+        setScale(Math.max(0.3, Math.min(3, Math.min(window.innerWidth / nat.w, window.innerHeight / nat.h))));
+      }
+    };
+    const onFs = () => {
+      setFs(document.fullscreenElement != null);
+      fit();
+    };
+    document.addEventListener('fullscreenchange', onFs);
+    window.addEventListener('resize', fit);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFs);
+      window.removeEventListener('resize', fit);
+    };
+  }, []);
+
+  const toggleFs = async () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+      return;
+    }
+    const stage = stageRef.current;
+    const inner = innerRef.current;
+    if (!stage || !inner) return;
+    const r = inner.getBoundingClientRect();
+    natRef.current = { w: Math.max(320, Math.ceil(r.width)), h: Math.max(240, Math.ceil(r.height)) };
+    try {
+      await stage.requestFullscreen();
+    } catch {
+      toast.error('Fullscreen was blocked here — it works on the published site');
+    }
+  };
 
   const loadBoard = useCallback(async () => {
     try {
@@ -105,9 +148,17 @@ export default function DuckcadeApp() {
             <Coins size={15} />
             <span aria-label="DuckCoins balance">{coins.balance == null ? '…' : coins.balance.toLocaleString()} DuckCoins</span>
           </div>
-          <div className="hidden text-[10px] text-white/35 sm:block">
+          <div className="hidden text-[10px] text-white/35 md:block">
             earn by playing · bet in Plinko Pond · +300/day max
           </div>
+          <button
+            onClick={() => void toggleFs()}
+            title={fs ? 'Exit fullscreen (Esc)' : 'Play fullscreen'}
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/10"
+          >
+            {fs ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            {fs ? 'Exit' : 'Fullscreen'}
+          </button>
         </div>
         <div className="os-scroll flex gap-1.5 overflow-x-auto border-b border-white/[0.06] p-3">
           {GAMES.map((g) => (
@@ -131,9 +182,22 @@ export default function DuckcadeApp() {
             </button>
           ))}
         </div>
-        <div className="os-scroll min-h-0 flex-1 overflow-y-auto p-4">
-          <div className="mb-3 text-xs text-white/40">{def.blurb} · playing as {myName}</div>
-          <Active onScore={submitScore} coins={coins} />
+        <div
+          ref={stageRef}
+          className={
+            fs
+              ? 'flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-[#070b14]'
+              : 'os-scroll min-h-0 flex-1 overflow-y-auto p-4'
+          }
+        >
+          <div
+            ref={innerRef}
+            className={fs ? 'shrink-0' : undefined}
+            style={fs ? { transform: `scale(${scale})`, transformOrigin: 'center center' } : undefined}
+          >
+            <div className="mb-3 text-xs text-white/40">{def.blurb} · playing as {myName}</div>
+            <Active onScore={submitScore} coins={coins} />
+          </div>
         </div>
       </div>
 

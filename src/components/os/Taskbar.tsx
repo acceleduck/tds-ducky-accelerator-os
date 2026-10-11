@@ -9,7 +9,7 @@ import { getApp } from './os-registry';
 import type { OsApp } from './os-registry';
 import { DuckLogo } from './DuckLogo';
 
-const PINNED = ['proxy', 'chat', 'search', 'arcade', 'speed', 'terminal', 'files'];
+const PINNED = ['proxy', 'chat', 'beats', 'arcade', 'speed', 'terminal', 'files'];
 
 export function Taskbar({ startOpen, onToggleStart }: { startOpen: boolean; onToggleStart: () => void }) {
   const { windows, openApp, focusWindow, minimizeWindow, restoreWindow, topWindowId } = useWindows();

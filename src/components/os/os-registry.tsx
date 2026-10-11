@@ -9,7 +9,7 @@ import {
   Settings as SettingsIcon,
   Info,
   MessageCircle,
-  Search,
+  Music2,
   Gamepad2,
   Cloud,
   Globe,
@@ -24,7 +24,7 @@ import TerminalApp from './apps/TerminalApp';
 import SettingsApp from './apps/SettingsApp';
 import AboutApp from './apps/AboutApp';
 import DuckChatApp from './apps/DuckChatApp';
-import DuckSearchApp from './apps/DuckSearchApp';
+import PlaylistApp from './apps/PlaylistApp';
 import BrowserApp from './apps/BrowserApp';
 import DuckcadeApp from './apps/DuckcadeApp';
 import CloudPlayApp from './apps/CloudPlayApp';
@@ -83,13 +83,13 @@ export const OS_APPS: OsApp[] = [
     Component: DuckChatApp,
   },
   {
-    id: 'search',
-    name: 'Duck Search',
-    tagline: 'Search the OS, duck style',
-    icon: Search,
-    iconBg: 'bg-gradient-to-br from-[#e2643f] to-[#b8432a]',
-    size: { w: 660, h: 580 },
-    Component: DuckSearchApp,
+    id: 'beats',
+    name: 'Duck Beats',
+    tagline: 'Your playlist — YouTube & Spotify in the OS',
+    icon: Music2,
+    iconBg: 'bg-gradient-to-br from-fuchsia-500 to-purple-600',
+    size: { w: 760, h: 620 },
+    Component: PlaylistApp,
   },
   {
     id: 'arcade',

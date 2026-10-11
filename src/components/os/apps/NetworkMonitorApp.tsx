@@ -54,17 +54,18 @@ export default function NetworkMonitorApp() {
     try {
       const sess = await db.query<SessionRow>('proxy_sessions', { order: '_created_at.desc', limit: '20' });
       const tst = await db.query<TestRow>('speed_tests', { order: '_created_at.desc', limit: '20' });
-      const aggRows = await db.query<{ down: number | null; up: number | null; count: number | null }>(
-        'proxy_sessions',
-        { select: 'down:download_mb.sum(),up:upload_mb.sum(),count' },
-      );
+      // sums aren't supported server-side — pull the columns and total them here
+      const allSess = await db.query<{ download_mb: number; upload_mb: number }>('proxy_sessions', {
+        select: 'download_mb,upload_mb',
+        limit: '500',
+      });
+      const total = await db.count('proxy_sessions');
       setSessions(sess);
       setTests(tst);
-      const a = aggRows[0];
       setAgg({
-        count: Number(a?.count) || 0,
-        down: Number(a?.down) || 0,
-        up: Number(a?.up) || 0,
+        count: total,
+        down: allSess.reduce((sum, r) => sum + (Number(r.download_mb) || 0), 0),
+        up: allSess.reduce((sum, r) => sum + (Number(r.upload_mb) || 0), 0),
       });
     } catch {
       // keep previous data

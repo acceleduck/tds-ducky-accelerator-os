@@ -1,4 +1,4 @@
-import { Gamepad2, MessageCircle, Search, ShieldCheck, Terminal as TerminalIcon } from 'lucide-react';
+import { Gamepad2, MessageCircle, Music2, ShieldCheck, Terminal as TerminalIcon } from 'lucide-react';
 import { DuckLogo } from '../DuckLogo';
 
 const HIGHLIGHTS = [
@@ -13,14 +13,14 @@ const HIGHLIGHTS = [
     text: 'A public lounge, your own little servers, private messages and (simulated) voice calls with anyone on the OS.',
   },
   {
-    icon: Search,
-    title: 'Duck Search',
-    text: 'Privacy-first search across the OS — apps and servers — with zero tracking.',
+    icon: Music2,
+    title: 'Duck Beats',
+    text: 'Paste YouTube or Spotify links into your own playlist and play them right inside the OS — saved to your account.',
   },
   {
     icon: Gamepad2,
     title: 'Duckcade',
-    text: 'Six original mini-games — Duck Dash, Factory Fright, Plinko Pond, Duck Poker, Gridiron Duck and Liquid Soccer — on a shared leaderboard.',
+    text: 'A dozen mini-games — maze warfare in Duck War 3, the 3D drift racer, Plinko Pond and more — on a shared leaderboard with DuckCoins.',
   },
   {
     icon: TerminalIcon,
