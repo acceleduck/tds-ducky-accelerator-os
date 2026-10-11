@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Shield } from 'lucide-react';
+import { KeyRound, Loader2, Shield } from 'lucide-react';
 import db from '@/lib/shared/kliv-database.js';
 import { functions } from '@/lib/shared/kliv-functions.js';
 import { toast } from 'sonner';
@@ -40,6 +40,10 @@ export default function StaffConsoleApp() {
   const [rankDraft, setRankDraft] = useState('member');
   const [pw, setPw] = useState('');
   const [busy, setBusy] = useState(false);
+  const [ownerUsersLoaded, setOwnerUsersLoaded] = useState(false);
+  const [ownerPw, setOwnerPw] = useState('');
+  const [ownerStaffPw, setOwnerStaffPw] = useState('');
+  const [ownerBusy, setOwnerBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!me) return;
@@ -115,6 +119,55 @@ export default function StaffConsoleApp() {
   const act = (power: 'mute' | 'ban' | 'ipban' | 'deviceban') =>
     modTarget ? canActOn(myRankId, power, targetRankId) : false;
   const grants = grantableRanks(myRankId);
+
+  // Owner tools: pull the full member list once so passwords can be reset
+  // even for ducks who have never chatted.
+  useEffect(() => {
+    if (myRankId !== 'owner' || ownerUsersLoaded) return;
+    setOwnerUsersLoaded(true);
+    (async () => {
+      try {
+        const res = await functions.post<{
+          ok: boolean;
+          users?: { uuid: string; username: string; name: string }[];
+        }>('owner-tools', { action: 'list-users' });
+        if (!res?.ok || !res.users) return;
+        setPeople((prev) => {
+          const seen = new Set(prev.map((p) => p.uuid));
+          const extra = res
+            .users!.filter((u) => u.uuid !== me && !seen.has(u.uuid))
+            .map((u) => ({ uuid: u.uuid, name: u.username || u.name || u.uuid.slice(0, 8) }));
+          return [...prev, ...extra];
+        });
+      } catch {
+        // the full roster is a bonus — chat authors still work without it
+      }
+    })();
+  }, [myRankId, ownerUsersLoaded, me]);
+
+  const ownerSetPassword = async () => {
+    if (!modTarget) return;
+    setOwnerBusy(true);
+    let res: { ok: boolean; userMessage?: string } | null = null;
+    try {
+      res = await functions.post<{ ok: boolean; userMessage?: string }>('owner-tools', {
+        action: 'set-password',
+        target_uuid: modTarget.uuid,
+        new_password: ownerPw,
+        staff_password: ownerStaffPw,
+      });
+    } catch {
+      res = { ok: false, userMessage: 'The owner service is unreachable — try again' };
+    }
+    setOwnerBusy(false);
+    if (res?.ok) {
+      toast.success(`Password updated for ${modTarget.name} — they use it at the next sign-in`);
+      setOwnerPw('');
+      setOwnerStaffPw('');
+    } else {
+      toast.error(res?.userMessage ?? 'Denied');
+    }
+  };
 
   return (
     <div data-testid="staff-app" className="os-scroll h-full overflow-y-auto p-5">
@@ -312,6 +365,47 @@ export default function StaffConsoleApp() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {myRankId === 'owner' && (
+        <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-3.5" data-testid="owner-tools">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-200/90">
+            <KeyRound size={12} /> Owner only — reset a duck's password
+          </div>
+          <div className="mt-1 text-[11px] leading-relaxed text-white/40">
+            Pick any duck above (the list includes everyone with an account), then set a new
+            password for them. Only the pond owner can do this — everyone else changes their own
+            in Settings.
+          </div>
+          <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+            <input
+              type="password"
+              value={ownerPw}
+              onChange={(e) => setOwnerPw(e.target.value)}
+              aria-label="Owner new password"
+              placeholder="New password for them (8+)"
+              autoComplete="new-password"
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:border-[var(--os-accent)] focus:outline-none"
+            />
+            <input
+              type="password"
+              value={ownerStaffPw}
+              onChange={(e) => setOwnerStaffPw(e.target.value)}
+              aria-label="Owner staff password"
+              placeholder="Staff password"
+              autoComplete="off"
+              className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:border-[var(--os-accent)] focus:outline-none"
+            />
+          </div>
+          <button
+            data-testid="owner-set-password"
+            disabled={ownerBusy || !modTarget || ownerPw.length < 8 || !ownerStaffPw}
+            onClick={() => void ownerSetPassword()}
+            className="mt-2 flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-[11px] font-bold text-[#17131f] transition hover:brightness-110 disabled:opacity-40"
+          >
+            {ownerBusy && <Loader2 size={12} className="animate-spin" />} Set password
+          </button>
         </div>
       )}
 

@@ -53,7 +53,7 @@ scenario(
     });
 
     await step('the settled result appears', async () => {
-      await expect(gambler.page.getByText(/Last: ×/).first()).toBeVisible();
+      await expect(gambler.page.getByLabel('drop results').getByText(/×/).first()).toBeVisible();
     });
   },
 );
@@ -73,7 +73,7 @@ scenario(
     });
 
     await step('the battlefield briefing is shown', async () => {
-      await expect(soldier.page.getByLabel('Duck War 3 battlefield')).toBeVisible();
+      await expect(soldier.page.getByLabel('Duck War maze battlefield')).toBeVisible();
       await expect(soldier.page.getByRole('button', { name: 'Deploy' })).toBeVisible();
     });
   },

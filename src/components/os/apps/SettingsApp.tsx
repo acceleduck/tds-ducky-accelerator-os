@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ImagePlus, KeyRound, Link2, Loader2, LogOut, Mail, Palette, Phone, Play, Trash2, Upload, UserRound } from 'lucide-react';
+import { Check, ImagePlus, KeyRound, Link2, Loader2, LogOut, Palette, Phone, Play, Trash2, Upload, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import content from '@/lib/shared/kliv-content.js';
 import { useAuth, authErrorToMessage } from '@/hooks/useAuth';
@@ -7,6 +7,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSettings, ACCENTS, WALLPAPERS, WALLPAPER_FITS, wallpaperStyle } from '@/hooks/useSettings';
 import type { WallpaperFit } from '@/hooks/useSettings';
 import { pfpProblem, sanitizeDisplayName } from '@/lib/os/profile';
+import { emailToUsername } from '@/lib/os/username';
 import { RINGTONES, playRingtone } from '@/lib/os/ringtone';
 import { DuckLogo } from '../DuckLogo';
 import { UserAvatar } from '../UserAvatar';
@@ -15,7 +16,7 @@ const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 
 export default function SettingsApp() {
   const { settings, accentHex, update } = useSettings();
-  const { user, signOut, updatePassword, updateEmail } = useAuth();
+  const { user, signOut, updatePassword } = useAuth();
   const profile = useProfile();
   const [urlInput, setUrlInput] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -33,10 +34,6 @@ export default function SettingsApp() {
   const [pwConfirm, setPwConfirm] = useState('');
   const [pwBusy, setPwBusy] = useState(false);
   const [pwErr, setPwErr] = useState<string | null>(null);
-  const [emNew, setEmNew] = useState('');
-  const [emCur, setEmCur] = useState('');
-  const [emBusy, setEmBusy] = useState(false);
-  const [emErr, setEmErr] = useState<string | null>(null);
 
   useEffect(() => {
     setNameInput(profile.rawName);
@@ -127,25 +124,6 @@ export default function SettingsApp() {
     }
   };
 
-  const changeEmail = async () => {
-    setEmErr(null);
-    const next = emNew.trim();
-    if (!/^\S+@\S+\.\S+$/.test(next)) {
-      setEmErr('Enter a valid new email address.');
-      return;
-    }
-    setEmBusy(true);
-    try {
-      await updateEmail(next, emCur);
-      toast.success('Confirmation sent — check the new inbox to finish the switch');
-      setEmNew('');
-      setEmCur('');
-    } catch (err) {
-      setEmErr(authErrorToMessage(err));
-    } finally {
-      setEmBusy(false);
-    }
-  };
   const applyUrl = () => {
     const t = urlInput.trim();
     if (!t) return;
@@ -411,12 +389,7 @@ export default function SettingsApp() {
           />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium text-white">{profile.name}</div>
-            <div className="truncate text-xs text-white/45">{user?.email}</div>
-            {user?.pendingEmail && (
-              <div className="mt-0.5 truncate text-[11px] text-amber-300/80">
-                Switching to {user.pendingEmail} — confirm from that inbox.
-              </div>
-            )}
+            <div className="truncate text-xs text-white/45">@{emailToUsername(user?.email)} · signs in with this username</div>
           </div>
           <button
             onClick={() => void signOut()}
@@ -541,51 +514,6 @@ export default function SettingsApp() {
           </button>
         </div>
 
-        {/* email */}
-        <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-white/70">
-            <Mail size={12} className="text-[var(--os-accent)]" /> Change email
-          </div>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <input
-              type="email"
-              value={emNew}
-              onChange={(e) => setEmNew(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void changeEmail();
-              }}
-              aria-label="New email address"
-              placeholder="new@pond.dev"
-              autoComplete="off"
-              className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white placeholder:text-white/30 focus:border-[var(--os-accent)] focus:outline-none"
-            />
-            <input
-              type="password"
-              value={emCur}
-              onChange={(e) => setEmCur(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void changeEmail();
-              }}
-              aria-label="Email current password"
-              placeholder="Current password"
-              autoComplete="current-password"
-              className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white placeholder:text-white/30 focus:border-[var(--os-accent)] focus:outline-none"
-            />
-          </div>
-          {emErr && <div className="mt-2 text-[11px] text-red-300">{emErr}</div>}
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => void changeEmail()}
-              disabled={emBusy || !emNew || !emCur}
-              className="flex items-center gap-1.5 rounded-xl bg-[var(--os-accent)] px-4 py-2 text-xs font-semibold text-[#17131f] transition hover:brightness-110 disabled:opacity-40"
-            >
-              {emBusy && <Loader2 size={12} className="animate-spin" />} Send confirmation
-            </button>
-            <span className="text-[11px] text-white/30">
-              The switch finishes after you confirm from the new inbox.
-            </span>
-          </div>
-        </div>
       </section>
 
       {/* about */}

@@ -4,6 +4,7 @@ import { useAuth, authErrorToMessage } from '@/hooks/useAuth';
 import { useSettings } from '@/hooks/useSettings';
 import { useProfile } from '@/hooks/useProfile';
 import { useNow } from '@/hooks/useNow';
+import { emailToUsername, isValidUsername, looksLikeEmail, normalizeUsername } from '@/lib/os/username';
 import { DuckLogo } from './DuckLogo';
 import { UserAvatar } from './UserAvatar';
 
@@ -60,7 +61,7 @@ export function LockScreen({ onUnlock }: { onUnlock?: () => void }) {
               <UserAvatar name={profile.name} pfp={profile.pfp} seed={user.userUuid} size={64} />
               <div className="text-center">
                 <div className="text-lg font-medium text-white">Welcome back, {profile.name}</div>
-                <div className="mt-1 text-sm text-white/50">{user.email}</div>
+                <div className="mt-1 text-sm text-white/50">@{emailToUsername(user.email)}</div>
               </div>
               <button
                 onClick={onUnlock}
@@ -83,11 +84,11 @@ function LoginCard({
   signIn,
   signUp,
 }: {
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signIn: (identifier: string, password: string) => Promise<void>;
+  signUp: (identifier: string, password: string, name?: string) => Promise<void>;
 }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -95,15 +96,31 @@ function LoginCard({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    if (mode === 'signup' && password.length < 8) {
-      setError('Password needs at least 8 characters.');
+    const typed = identifier.trim();
+    if (!typed) {
+      setError('Pick a username first.');
       return;
+    }
+    const username = normalizeUsername(typed);
+    if (mode === 'signup') {
+      if (looksLikeEmail(typed)) {
+        setError('No email needed — just pick a username.');
+        return;
+      }
+      if (!isValidUsername(username)) {
+        setError('Usernames need 2+ characters — letters, numbers, dots, dashes or underscores.');
+        return;
+      }
+      if (password.length < 8) {
+        setError('Password needs at least 8 characters.');
+        return;
+      }
     }
     setBusy(true);
     setError('');
     try {
-      if (mode === 'signin') await signIn(email.trim(), password);
-      else await signUp(email.trim(), password);
+      if (mode === 'signin') await signIn(typed, password);
+      else await signUp(username, password, username);
     } catch (err) {
       setError(authErrorToMessage(err));
     } finally {
@@ -138,15 +155,16 @@ function LoginCard({
       </div>
 
       <label className="flex flex-col gap-1.5 text-xs text-white/60">
-        Email
+        Username
         <input
-          type="email"
+          type="text"
           required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="username"
+          autoFocus
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
           className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-[var(--os-accent)] focus:outline-none"
-          placeholder="you@pond.dev"
+          placeholder="acceleduck"
         />
       </label>
 
@@ -160,7 +178,7 @@ function LoginCard({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-[var(--os-accent)] focus:outline-none"
-          placeholder="8+ chars, upper & lower, number, symbol"
+          placeholder="At least 8 characters"
         />
       </label>
 
@@ -176,7 +194,8 @@ function LoginCard({
       </button>
 
       <div className="text-center text-[11px] text-white/30">
-        Your sessions, chats and scores are saved to your account.
+        Just a username and password — no email needed. Your sessions, chats and scores
+        are saved to your account.
       </div>
     </form>
   );
