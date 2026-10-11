@@ -96,7 +96,7 @@ export function Taskbar({ startOpen, onToggleStart }: { startOpen: boolean; onTo
           <TaskButton key={app.id} app={app} />
         ))}
       </div>
-      <div className="flex flex-1 items-center justify-end gap-2 pr-2">
+      <div className="flex flex-1 items-center justify-end gap-2 pr-40">
         <button
           aria-label="Proxy status"
           title={connected ? `Protected · ${server?.name ?? ''}` : 'Unprotected'}
