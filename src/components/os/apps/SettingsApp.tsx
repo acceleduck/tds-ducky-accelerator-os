@@ -7,6 +7,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSettings, ACCENTS, WALLPAPERS, WALLPAPER_FITS, wallpaperStyle } from '@/hooks/useSettings';
 import type { WallpaperFit } from '@/hooks/useSettings';
 import { pfpProblem, sanitizeDisplayName } from '@/lib/os/profile';
+import { renameCountdown } from '@/lib/os/rename';
 import { emailToUsername } from '@/lib/os/username';
 import { RINGTONES, playRingtone } from '@/lib/os/ringtone';
 import { DuckLogo } from '../DuckLogo';
@@ -53,8 +54,8 @@ export default function SettingsApp() {
     try {
       await profile.save({ name: clean });
       toast.success('Name saved — chat and the lock screen will use it');
-    } catch {
-      toast.error('Could not save your name — try again.');
+    } catch (e) {
+      toast.error(e instanceof Error && e.message ? e.message : 'Could not save your name — try again.');
     } finally {
       setNameBusy(false);
     }
@@ -459,6 +460,15 @@ export default function SettingsApp() {
               {nameBusy && <Loader2 size={12} className="animate-spin" />} Save name
             </button>
           </div>
+          <div className="mt-2 text-[10px] leading-relaxed text-white/35">
+            Names belong to their ducks: another member's name can't be taken (yours included), renames happen once a
+            day, and every change is announced in the lounge — so nobody can quietly become someone else.
+          </div>
+          {profile.nextRenameAt > Date.now() && (
+            <div className="mt-1 text-[10px] text-amber-300/80">
+              Next rename unlocks in {renameCountdown(profile.nextRenameAt)}
+            </div>
+          )}
         </div>
 
         {/* password */}

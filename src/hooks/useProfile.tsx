@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import db from '@/lib/shared/kliv-database.js';
+import { functions } from '@/lib/shared/kliv-functions.js';
 import { useAuth } from '@/hooks/useAuth';
 import { profileName, sanitizeDisplayName } from '@/lib/os/profile';
 import type { ProfileRow } from '@/lib/os/profile';
+
+interface GuardReply {
+  ok: boolean;
+  code?: string;
+  userMessage?: string;
+  profile?: { display_name: string | null; pfp: string | null };
+  nextRenameAt?: number;
+}
 
 interface ProfileApi {
   /** Finished the first load (row found or not). */
@@ -14,6 +23,13 @@ interface ProfileApi {
   /** Path to the profile picture (under /content/pfps/), or null. */
   pfp: string | null;
   saving: boolean;
+  /** Unix ms when the next rename unlocks — 0 when a rename is allowed now. */
+  nextRenameAt: number;
+  /**
+   * Save a profile change. Every edit goes through the profile guard service,
+   * which owns the rename rules (no stealing names, one rename a day,
+   * announcements) — a rejection throws with a message meant for the duck.
+   */
   save: (patch: { name?: string; pfp?: string | null }) => Promise<void>;
 }
 
@@ -22,15 +38,15 @@ export function useProfile(): ProfileApi {
   const { user } = useAuth();
   const uuid = user?.userUuid ?? null;
   const [row, setRow] = useState<ProfileRow | null>(null);
-  const [rowId, setRowId] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [nextRenameAt, setNextRenameAt] = useState(0);
 
   useEffect(() => {
     if (!uuid) {
       setRow(null);
-      setRowId(null);
       setReady(true);
+      setNextRenameAt(0);
       return;
     }
     let alive = true;
@@ -42,17 +58,17 @@ export function useProfile(): ProfileApi {
           limit: '1',
         });
         if (!alive) return;
-        if (rows[0]) {
-          setRow(rows[0]);
-          setRowId(rows[0]._row_id);
-        } else {
-          setRow(null);
-          setRowId(null);
-        }
+        setRow(rows[0] ?? null);
       } catch {
         // offline — keep whatever we had
       } finally {
         if (alive) setReady(true);
+      }
+      try {
+        const res = await functions.post<GuardReply>('profile-guard', { action: 'status' });
+        if (alive && res?.ok) setNextRenameAt(res.nextRenameAt ?? 0);
+      } catch {
+        // offline — no countdown to show
       }
     })();
     return () => {
@@ -65,26 +81,36 @@ export function useProfile(): ProfileApi {
       if (!uuid) throw new Error('Sign in before editing your profile');
       setSaving(true);
       try {
-        const data = {
-          user_uuid: uuid,
-          display_name:
-            patch.name !== undefined ? sanitizeDisplayName(patch.name) || null : row?.display_name ?? null,
-          pfp: patch.pfp !== undefined ? patch.pfp : row?.pfp ?? null,
-          updated_at: Math.floor(Date.now() / 1000),
-        };
-        if (rowId != null) {
-          await db.update('user_profiles', { _row_id: `eq.${rowId}` }, data);
-          setRow((prev) => (prev ? { ...prev, ...data } : prev));
-        } else {
-          const created = await db.insertOne<ProfileRow>('user_profiles', data);
-          setRowId(created._row_id);
-          setRow(created);
+        const res = await functions.post<GuardReply>('profile-guard', {
+          action: 'save',
+          display_name: patch.name !== undefined ? sanitizeDisplayName(patch.name) || null : undefined,
+          pfp: patch.pfp !== undefined ? patch.pfp : undefined,
+        });
+        if (!res || res.ok !== true) {
+          throw new Error(res?.userMessage || 'Could not save — try again');
         }
+        setNextRenameAt(res.nextRenameAt ?? 0);
+        if (res.profile) {
+          const saved = res.profile;
+          setRow((prev) => {
+            const base: ProfileRow = prev ?? { _row_id: 0, user_uuid: uuid, display_name: null, pfp: null };
+            return { ...base, display_name: saved.display_name, pfp: saved.pfp };
+          });
+        }
+      } catch (e) {
+        // A refusal (cooldown, stolen name…) arrives as details on the error.
+        const details = (e as { details?: unknown })?.details;
+        const fromGuard =
+          details && typeof details === 'object'
+            ? (details as { userMessage?: unknown }).userMessage
+            : null;
+        if (typeof fromGuard === 'string' && fromGuard) throw new Error(fromGuard);
+        throw e instanceof Error ? e : new Error('Could not save — try again');
       } finally {
         setSaving(false);
       }
     },
-    [uuid, row, rowId],
+    [uuid],
   );
 
   return {
@@ -93,6 +119,7 @@ export function useProfile(): ProfileApi {
     rawName: sanitizeDisplayName(row?.display_name),
     pfp: row?.pfp ?? null,
     saving,
+    nextRenameAt,
     save,
   };
 }

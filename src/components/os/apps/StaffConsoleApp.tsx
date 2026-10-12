@@ -17,6 +17,14 @@ interface RankRow {
   rank: string;
 }
 
+interface NameChangeRow {
+  _row_id: number;
+  user_uuid: string;
+  old_name: string;
+  new_name: string;
+  _created_at: number;
+}
+
 interface AuthorRow {
   author_uuid: string;
   author_name: string;
@@ -36,6 +44,7 @@ export default function StaffConsoleApp() {
 
   const [people, setPeople] = useState<Person[]>([]);
   const [rankRows, setRankRows] = useState<RankRow[]>([]);
+  const [nameChanges, setNameChanges] = useState<NameChangeRow[]>([]);
   const [modTarget, setModTarget] = useState<Person | null>(null);
   const [rankDraft, setRankDraft] = useState('member');
   const [pw, setPw] = useState('');
@@ -48,18 +57,20 @@ export default function StaffConsoleApp() {
   const load = useCallback(async () => {
     if (!me) return;
     try {
-      const [authors, ranks] = await Promise.all([
+      const [authors, ranks, renames] = await Promise.all([
         db.query<AuthorRow>('chat_messages', {
           select: 'author_uuid,author_name,_created_at',
           order: '_created_at.desc',
           limit: '150',
         }),
         db.query<RankRow>('chat_ranks', { limit: '200' }),
+        db.query<NameChangeRow>('duck_name_history', { order: '_created_at.desc', limit: '30' }),
       ]);
       const seen = new Map<string, string>();
       for (const a of authors) if (a.author_uuid !== me) seen.set(a.author_uuid, a.author_name);
       setPeople([...seen.entries()].map(([uuid, name]) => ({ uuid, name })));
       setRankRows(ranks);
+      setNameChanges(renames);
     } catch {
       // offline — keep what we have
     }
@@ -237,6 +248,27 @@ export default function StaffConsoleApp() {
           </div>
         </>
       )}
+
+      <div className="mt-4 text-[10px] font-bold uppercase tracking-wider text-white/35">Recent name changes</div>
+      <div className="os-scroll mt-1.5 flex max-h-32 flex-col gap-1 overflow-y-auto">
+        {nameChanges.length === 0 && (
+          <div className="py-2 text-xs text-white/40">No renames yet — every change lands here, announced to the lounge.</div>
+        )}
+        {nameChanges.map((c) => (
+          <div
+            key={c._row_id}
+            data-testid="rename-row"
+            className="flex items-center gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5 text-[11px]"
+          >
+            <span className="truncate text-white/50 line-through decoration-white/25">{c.old_name}</span>
+            <span className="text-white/30">→</span>
+            <span className="truncate font-semibold text-white/85">{c.new_name}</span>
+            <span className="ml-auto shrink-0 font-mono text-[10px] text-white/35">
+              {new Date(c._created_at * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        ))}
+      </div>
 
       <div className="mt-4 text-[10px] font-bold uppercase tracking-wider text-white/35">Pick a duck</div>
       <div className="os-scroll mt-1.5 flex max-h-36 flex-col gap-1 overflow-y-auto">
